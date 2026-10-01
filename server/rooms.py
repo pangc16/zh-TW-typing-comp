@@ -67,6 +67,7 @@ class Room:
     players: dict[str, Player] = field(default_factory=dict)
     cleanup_task: asyncio.Task | None = None
     # 比賽資料
+    category: str = ""                   # 房主選的文章分類
     text: str = ""                       # 正規化後的文章，顯示與比對都用這一份
     started_at: float | None = None      # time.monotonic()，用伺服器自己的時鐘計時
     countdown_task: asyncio.Task | None = None
@@ -96,6 +97,11 @@ class Room:
             "text": self.text,
             "total": len(self.text),
         }
+        if self.state in ("lobby", "finished"):
+            # 只有 Lobby 會用到分類選單，比賽中不必每次進度更新都重複送
+            data["category"] = self.category
+            data["categories"] = texts.category_names()
+            data["upcoming"] = config.UPCOMING_CATEGORIES
         if self.state == "racing" and self.started_at is not None:
             # 中途重連的人靠這個把計時器接回正確的秒數
             data["elapsed"] = round(time.monotonic() - self.started_at, 2)
@@ -128,7 +134,7 @@ class RoomManager:
         raise RoomError("目前房間太多，請稍後再試")
 
     def create_room(self) -> Room:
-        room = Room(code=self._new_code())
+        room = Room(code=self._new_code(), category=texts.default_category())
         self.rooms[room.code] = room
         return room
 
@@ -223,7 +229,18 @@ class RoomManager:
 
     # ---------- 比賽流程 ----------
 
-    async def start_game(self, room: Room, player: Player, custom_text: str) -> None:
+    async def set_category(self, room: Room, player: Player, category: str) -> None:
+        """房主換分類時立刻同步給全房，其他人才知道這局要打什麼類型。"""
+        if player.id != room.host_id:
+            raise RoomError("只有房主可以更換文章分類")
+        if category not in texts.CATEGORIES:
+            raise RoomError(f"找不到分類「{category}」")
+        room.category = category
+        await self.broadcast(room)
+
+    async def start_game(
+        self, room: Room, player: Player, custom_text: str, category: str
+    ) -> None:
         if player.id != room.host_id:
             raise RoomError("只有房主可以開始遊戲")
         if room.state not in ("lobby", "finished"):
@@ -236,7 +253,12 @@ class RoomManager:
             if len(text) > config.MAX_TEXT_LENGTH:
                 raise RoomError(f"自訂文章太長，上限 {config.MAX_TEXT_LENGTH} 個字")
         else:
-            text = texts.pick_random(exclude=room.text)
+            if category:
+                room.category = category
+            try:
+                text = texts.pick_random(room.category, exclude=room.text)
+            except KeyError:
+                raise RoomError(f"找不到分類「{room.category}」")
 
         room.text = text
         room.started_at = None

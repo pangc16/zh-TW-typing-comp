@@ -29,3 +29,11 @@ FINISH_GRACE_SECONDS = 60
 # 自訂文章的長度限制（正規化後的字數）
 MIN_TEXT_LENGTH = 10
 MAX_TEXT_LENGTH = 400
+
+
+# ---------- 文章分類 ----------
+
+# 還沒有文章的分類。會出現在 Lobby 的選單裡但不能選，純粹預告。
+# 真的要開放時，就在 data/articles.txt 加一行「== 名稱 ==」並寫文章，
+# 然後把這裡對應的項目刪掉。
+UPCOMING_CATEGORIES = ["持續更新中..."]

@@ -280,11 +280,47 @@ function renderLobby() {
   }
 
   const host = isHost();
+  renderCategories();
+  $("category-field").classList.toggle("hidden", !host);
   $("custom-text-box").classList.toggle("hidden", !host);
   $("start-btn").disabled = !host;
+
+  const note = $("category-note");
+  note.classList.toggle("hidden", host);
+  note.textContent = host ? "" : `文章分類：${room.category || "—"}`;
+
   $("lobby-hint").textContent = host
     ? "所有人會同時倒數、同時開始"
     : "等待房主開始遊戲";
+}
+
+function renderCategories() {
+  const select = $("category-select");
+  const available = room.categories || [];
+  const upcoming = room.upcoming || [];
+
+  // 每次廣播都重建選單會把房主選到一半的值清掉，所以內容沒變就不動
+  const signature = JSON.stringify([available, upcoming]);
+  if (select.dataset.signature !== signature) {
+    select.innerHTML = "";
+    for (const name of available) {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      select.append(option);
+    }
+    for (const name of upcoming) {
+      const option = document.createElement("option");
+      option.textContent = name;
+      option.disabled = true;   // 預告而已，選不了
+      select.append(option);
+    }
+    select.dataset.signature = signature;
+  }
+
+  if (room.category && select.value !== room.category) {
+    select.value = room.category;
+  }
 }
 
 // ---------- 倒數與比賽 ----------
@@ -591,8 +627,17 @@ $("custom-text").addEventListener("input", (event) => {
   $("custom-count").textContent = String(normalize(event.target.value).length);
 });
 
+$("category-select").addEventListener("change", (event) => {
+  // 立刻同步給其他人，他們的 Lobby 才看得到房主選了什麼
+  send({ type: "category", category: event.target.value });
+});
+
 $("start-btn").addEventListener("click", () => {
-  send({ type: "start", text: $("custom-text").value });
+  send({
+    type: "start",
+    text: $("custom-text").value,
+    category: $("category-select").value,
+  });
 });
 
 $("again-btn").addEventListener("click", () => send({ type: "restart" }));

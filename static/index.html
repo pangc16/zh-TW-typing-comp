@@ -11,7 +11,10 @@
   <div id="toast" class="hidden"></div>
 
   <div class="app">
-    <div class="brand">中文打字競速</div>
+    <header class="brand">
+      <h1>中文打字競速</h1>
+      <span class="beta">測試版</span>
+    </header>
 
     <!-- 畫面 1：進入 -->
     <section id="screen-home" class="card">
@@ -49,8 +52,15 @@
       </div>
       <ul class="player-list" id="player-list"></ul>
 
+      <div class="field hidden" id="category-field">
+        <label for="category-select">文章分類</label>
+        <select id="category-select"></select>
+      </div>
+
+      <p class="hint category-note hidden" id="category-note"></p>
+
       <details id="custom-text-box" class="custom-box hidden">
-        <summary>自訂文章（留空則隨機抽一篇）</summary>
+        <summary>自訂文章（留空則從上面的分類隨機抽）</summary>
         <textarea id="custom-text" rows="4" placeholder="貼上想比的文章，約 100 字最剛好"></textarea>
         <div class="counter"><span id="custom-count">0</span> 字</div>
       </details>

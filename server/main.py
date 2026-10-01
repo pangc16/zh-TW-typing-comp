@@ -82,7 +82,18 @@ async def handle_message(room, player, message: dict) -> None:
 
     elif kind == "start":
         try:
-            await manager.start_game(room, player, str(message.get("text") or ""))
+            await manager.start_game(
+                room,
+                player,
+                str(message.get("text") or ""),
+                str(message.get("category") or ""),
+            )
+        except RoomError as exc:
+            await player.ws.send_json({"type": "notice", "message": str(exc)})
+
+    elif kind == "category":
+        try:
+            await manager.set_category(room, player, str(message.get("category") or ""))
         except RoomError as exc:
             await player.ws.send_json({"type": "notice", "message": str(exc)})
 
