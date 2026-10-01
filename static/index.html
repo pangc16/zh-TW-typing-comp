@@ -4,106 +4,92 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>中文打字競速</title>
-  <style>
-    :root {
-      --bg: #f6f7f9;
-      --card: #ffffff;
-      --text: #1b1d21;
-      --muted: #6b7280;
-      --accent: #2563eb;
-      --line: #e5e7eb;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #14161a;
-        --card: #1d2026;
-        --text: #e8eaed;
-        --muted: #9aa1ab;
-        --accent: #60a5fa;
-        --line: #2c3038;
-      }
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      background: var(--bg);
-      color: var(--text);
-      font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
-    }
-
-    .card {
-      width: 100%;
-      max-width: 420px;
-      padding: 40px 32px;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      background: var(--card);
-      text-align: center;
-    }
-
-    h1 {
-      margin: 0 0 8px;
-      font-size: 1.6rem;
-      letter-spacing: 0.02em;
-    }
-
-    .sub {
-      margin: 0 0 28px;
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
-
-    .status {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
-      border-radius: 999px;
-      background: color-mix(in srgb, var(--accent) 12%, transparent);
-      color: var(--accent);
-      font-size: 0.88rem;
-      font-weight: 600;
-    }
-
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: currentColor;
-    }
-
-    .note {
-      margin: 28px 0 0;
-      padding-top: 20px;
-      border-top: 1px solid var(--line);
-      color: var(--muted);
-      font-size: 0.8rem;
-      line-height: 1.7;
-    }
-  </style>
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <main class="card">
-    <h1>中文打字競速</h1>
-    <p class="sub">多人連線 · 比正確 · 比速度</p>
+  <div id="banner" class="hidden">連線中斷，正在重新連線…</div>
+  <div id="toast" class="hidden"></div>
 
-    <div class="status">
-      <span class="dot"></span>
-      <span>伺服器運作中</span>
-    </div>
+  <div class="app">
+    <div class="brand">中文打字競速</div>
 
-    <p class="note">
-      部署測試頁面<br>
-      看到這一頁，代表整條部署路線已經打通。
-    </p>
-  </main>
+    <!-- 畫面 1：進入 -->
+    <section id="screen-home" class="card">
+      <div class="field">
+        <label for="nickname-input">你的暱稱</label>
+        <input id="nickname-input" type="text" maxlength="12" placeholder="例如：小明" autocomplete="off">
+      </div>
+
+      <button id="create-btn">建立房間</button>
+
+      <div class="divider">或加入朋友的房間</div>
+
+      <div class="field">
+        <label for="room-code-input">房號</label>
+        <input id="room-code-input" type="text" maxlength="4" placeholder="ABCD" autocomplete="off"
+               autocapitalize="characters" spellcheck="false">
+      </div>
+
+      <button id="join-btn" class="secondary">加入房間</button>
+
+      <div id="home-error" class="error hidden"></div>
+    </section>
+
+    <!-- 畫面 2：Lobby -->
+    <section id="screen-lobby" class="card hidden">
+      <div class="room-code-box">
+        <div class="room-code-label">房號</div>
+        <div class="room-code" id="room-code-display">----</div>
+        <button id="copy-btn" class="secondary">複製邀請連結</button>
+      </div>
+
+      <div class="section-head">
+        <span>玩家</span>
+        <span id="player-count">0 / 8</span>
+      </div>
+      <ul class="player-list" id="player-list"></ul>
+
+      <details id="custom-text-box" class="custom-box hidden">
+        <summary>自訂文章（留空則隨機抽一篇）</summary>
+        <textarea id="custom-text" rows="4" placeholder="貼上想比的文章，約 100 字最剛好"></textarea>
+        <div class="counter"><span id="custom-count">0</span> 字</div>
+      </details>
+
+      <button id="start-btn">開始遊戲</button>
+      <p class="hint" id="lobby-hint"></p>
+
+      <button id="leave-btn" class="leave">離開房間</button>
+    </section>
+
+    <!-- 畫面 3：比賽 -->
+    <section id="screen-race" class="card hidden">
+      <div class="race-head">
+        <div class="metric"><span id="race-timer">0.0</span><small>秒</small></div>
+        <div class="metric right"><span id="race-progress">0 / 0</span><small>字</small></div>
+      </div>
+
+      <div id="article" class="article"><span id="art-done"></span><span id="art-cursor"></span><span id="art-rest"></span></div>
+
+      <textarea id="typing-input" rows="3" placeholder="倒數結束後開始輸入…"
+                autocomplete="off" autocapitalize="off" spellcheck="false" disabled></textarea>
+      <p class="hint" id="typing-hint"></p>
+
+      <ul class="progress-list" id="progress-list"></ul>
+      <p class="hint" id="grace-hint"></p>
+
+      <div id="countdown" class="countdown hidden"><span id="countdown-number">3</span></div>
+    </section>
+
+    <!-- 畫面 4：結果 -->
+    <section id="screen-result" class="card hidden">
+      <h2 class="result-title">比賽結果</h2>
+      <ol class="result-list" id="result-list"></ol>
+      <button id="again-btn">再來一局</button>
+      <p class="hint" id="result-hint"></p>
+      <button id="leave-btn-2" class="leave">離開房間</button>
+    </section>
+  </div>
+
+  <script src="/app.js"></script>
 </body>
 </html>
