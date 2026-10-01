@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# 虛擬環境（每台電腦自己建，不要上傳）
+.venv/
+venv/
+env/
+
+# 環境變數與密鑰
+.env
+
+# 編輯器與系統檔
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
