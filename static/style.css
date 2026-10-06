@@ -10,10 +10,28 @@
   --online: #16a34a;
   --offline: #9ca3af;
   --danger: #dc2626;
+  color-scheme: light;
 }
 
+/* 暗色主題：右上角按鈕切換時設定 data-theme="dark" */
+:root[data-theme="dark"] {
+  --bg: #14161a;
+  --card: #1d2026;
+  --text: #e8eaed;
+  --muted: #9aa1ab;
+  --accent: #3b82f6;
+  --accent-text: #ffffff;
+  --line: #2c3038;
+  --input-bg: #15171c;
+  --online: #22c55e;
+  --offline: #6b7280;
+  --danger: #f87171;
+  color-scheme: dark;
+}
+
+/* JavaScript 沒跑起來（還沒設定 data-theme）時，跟著系統設定 */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --bg: #14161a;
     --card: #1d2026;
     --text: #e8eaed;
@@ -25,8 +43,43 @@
     --online: #22c55e;
     --offline: #6b7280;
     --danger: #f87171;
+    color-scheme: dark;
   }
 }
+
+/* ---------- 亮暗切換鍵 ---------- */
+
+.theme-btn {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--text);
+}
+
+.theme-btn svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 亮色時顯示月亮（按了變暗），暗色時顯示太陽（按了變亮） */
+.theme-btn .icon-sun { display: none; }
+:root[data-theme="dark"] .theme-btn .icon-sun { display: block; }
+:root[data-theme="dark"] .theme-btn .icon-moon { display: none; }
 
 * { box-sizing: border-box; }
 
@@ -410,51 +463,6 @@ textarea:disabled {
   font-weight: 700;
 }
 
-/* ---------- 進度列表 ---------- */
-
-.progress-list {
-  margin: 18px 0 0;
-  padding: 16px 0 0;
-  border-top: 1px solid var(--line);
-  list-style: none;
-}
-
-.progress-list li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 9px;
-  font-size: 0.85rem;
-}
-
-.progress-list .player-name {
-  flex: none;
-  width: 92px;
-}
-
-.progress-list li.offline .player-name {
-  color: var(--muted);
-}
-
-.bar {
-  flex: 1;
-  height: 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--muted) 22%, transparent);
-  overflow: hidden;
-}
-
-.fill {
-  height: 100%;
-  border-radius: 999px;
-  background: var(--accent);
-  transition: width 0.18s ease-out;
-}
-
-.fill.done {
-  background: var(--online);
-}
-
 .stat {
   flex: none;
   width: 48px;
@@ -567,4 +575,413 @@ select option:disabled {
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 9px;
+}
+
+/* ---------- 賽道 ---------- */
+
+.track-list {
+  margin: 18px 0 0;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+.lane {
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+}
+
+.lane-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.lane-rank {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--muted) 20%, transparent);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.lane.mine .player-name { font-weight: 700; }
+.lane.offline .player-name { color: var(--muted); }
+
+.lane .stat {
+  width: auto;
+  font-size: 0.78rem;
+}
+
+.lane.done .stat { color: var(--online); font-weight: 700; }
+
+.track {
+  position: relative;
+  height: 26px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 14%, transparent);
+  /* 右端的虛線是終點線 */
+  box-shadow: inset -3px 0 0 color-mix(in srgb, var(--muted) 45%, transparent);
+}
+
+.runner {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--muted);
+  color: var(--card);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  transition: left 0.25s ease-out, transform 0.25s ease-out;
+}
+
+.lane.mine .runner { background: var(--accent); color: var(--accent-text); }
+.lane.done .runner { background: var(--online); color: #fff; }
+.lane.offline .runner { opacity: 0.45; }
+
+/* ---------- 勝場與個人紀錄 ---------- */
+
+.tag.wins {
+  background: color-mix(in srgb, var(--online) 16%, transparent);
+  color: var(--online);
+}
+
+
+.my-round {
+  margin: -8px 0 20px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  text-align: center;
+}
+
+.my-speed {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.my-speed.record { color: var(--online); }
+
+.stats-sub {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+
+#standings-box { margin-bottom: 20px; }
+
+.standings {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: standing;
+}
+
+.standings li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  counter-increment: standing;
+}
+
+.standings li::before {
+  content: counter(standing);
+  flex: none;
+  width: 18px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.standings li.mine {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+#lobby-btn { margin-top: 10px; }
+
+.stats-box {
+  margin-top: 22px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-size: 0.85rem;
+}
+
+.stats-box summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.stats-grid div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stats-grid small {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.stats-grid strong {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-box .leave { margin-top: 10px; }
+
+.stop { margin-top: 12px; }
+
+/* 窄螢幕上，切換鍵固定在右上角，所以內容往下留空間，避免蓋到標題 */
+@media (max-width: 520px) {
+  body { padding-top: 66px; }
+}
+
+/* ---------- 開發者專區 ---------- */
+
+.dev-link {
+  display: block;
+  margin-top: 18px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.app.wide { max-width: 640px; }
+
+.dev-title { font-size: 1.7rem; }
+
+.dev-card { margin-bottom: 16px; }
+
+.dev-card h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.dev-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 14px;
+}
+
+.hint-inline {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.dev-sub { margin-top: 22px; }
+
+.stats-grid-4 { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
+
+.room-list { margin-top: 6px; }
+
+.room-row-code {
+  flex: none;
+  width: 52px;
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+}
+
+.room-row-info {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+button.small {
+  width: auto;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+}
+
+button.danger {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+}
+
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0 10px;
+  margin-top: 12px;
+}
+
+.inline-form .field { flex: 1 1 110px; }
+.inline-form .field.grow { flex: 1 1 260px; }
+
+.inline-form button {
+  flex: 1 1 100%;
+  margin-bottom: 10px;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0 12px;
+  margin-top: 12px;
+}
+
+@media (max-width: 520px) {
+  .settings-grid { grid-template-columns: 1fr; }
+}
+
+/* ---------- 房主踢人 ---------- */
+
+.kick-btn {
+  flex: none;
+  width: auto;
+  padding: 3px 9px;
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--danger);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* ---------- 比賽畫面加寬 ---------- */
+
+.app.race-wide { max-width: 820px; }
+
+.race-wide .article {
+  padding: 20px 22px;
+  font-size: 1.3rem;
+}
+
+.race-wide #typing-input { font-size: 1.15rem; }
+
+/* ---------- 開發者專區：介面設計預覽 ---------- */
+
+.design-options {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.design-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.design-option:has(input:checked) {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.design-option input {
+  width: auto;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.design-option span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.design-option small {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+/* ---------- 名次變動 ---------- */
+
+.lane { position: relative; }
+
+/* 往前超車的那一列：浮在其他列上面，背景閃一下綠色再淡掉 */
+.lane.gaining {
+  z-index: 1;
+  animation: lane-gain 1.6s ease-out;
+}
+
+@keyframes lane-gain {
+  0%, 40% { background-color: color-mix(in srgb, var(--online) 28%, var(--card)); }
+  100% { background-color: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lane.gaining { animation: none; }
+}
+
+/* ---------- 開發者專區：房間控制面板 ---------- */
+
+.room-panel { border-bottom: 1px solid var(--line); }
+
+.room-panel summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+
+.room-panel-body { padding: 0 0 16px; }
+
+.room-players {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.room-players li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 0.88rem;
+}
+
+.room-category {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  white-space: nowrap;
+}
+
+.room-category select { padding: 8px 10px; font-size: 0.9rem; }
+
+.room-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
 }

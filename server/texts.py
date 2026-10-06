@@ -63,6 +63,15 @@ if not CATEGORIES:
     raise RuntimeError("data/articles.txt 裡沒有任何分類與文章")
 
 
+def reload() -> None:
+    """改完 articles.txt 後不用重啟伺服器，從開發者專區按一下就重新讀取。"""
+    global CATEGORIES
+    categories = load_categories()
+    if not categories:
+        raise RuntimeError("data/articles.txt 裡沒有任何分類與文章，維持原本的文章庫")
+    CATEGORIES = categories
+
+
 def category_names() -> list[str]:
     return list(CATEGORIES)
 

@@ -1,0 +1,545 @@
+/* 試做設計：賽事計時看板
+   蓋在 style.css 上面，只在開發者專區選了這套的瀏覽器才會載入。
+   參考 F1 計時塔、田徑比分板、運動轉播字卡：純色塊、高對比、窄體粗字、等寬數字。
+   不用漸層、不發光、不用大圓角；比賽感靠排版，不靠特效。
+   顏色沿用賽車計時的慣例：綠 = 完成，紫 = 個人最佳，黃 = 領先／目前焦點。 */
+
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap");
+
+/* 深色：不用純黑，用帶一點藍的炭灰，底色／卡片／面板三層分得出來；
+   黃色稍微壓暗，避免在深色底上刺眼 */
+:root[data-theme="dark"] {
+  --bg: #0f1114;
+  --card: #181b20;
+  --panel: #22262d;
+  --text: #ecebe6;
+  --muted: #8d939d;
+  --accent: #f5c518;
+  --accent-text: #111316;
+  --line: #2f333b;
+  --input-bg: #1d2026;
+  --online: #2ecc7f;
+  --offline: #5a606b;
+  --danger: #ff4b3e;
+  --best: #b36bff;
+}
+
+:root[data-theme="light"] {
+  --bg: #ecebe6;
+  --card: #ffffff;
+  --panel: #f5f4ef;
+  --text: #0c0c0d;
+  --muted: #6c6c72;
+  --accent: #ffd400;
+  --accent-text: #0c0c0d;
+  --line: #d6d5cf;
+  --input-bg: #fafaf7;
+  --online: #00a85a;
+  --offline: #a4a4a9;
+  --danger: #e2261b;
+  --best: #8a2be2;
+}
+
+:root {
+  --cond: "Barlow Condensed", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+}
+
+/* ---------- 整體 ---------- */
+
+body {
+  font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+  background: var(--bg);
+}
+
+/* 標題做成轉播字卡：靠左、粗、黃色色塊標籤 */
+.brand {
+  justify-content: flex-start;
+  gap: 0;
+  margin-bottom: 14px;
+}
+
+.brand h1 {
+  padding: 4px 14px 6px 0;
+  font-weight: 900;
+  font-size: 1.9rem;
+  letter-spacing: 0.02em;
+}
+
+.beta {
+  padding: 2px 7px;
+  border: none;
+  border-radius: 0;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-family: var(--cond);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.card {
+  border: none;
+  border-top: 4px solid var(--text);
+  border-radius: 0;
+  background: var(--card);
+}
+
+label,
+.section-head,
+.room-code-label,
+.divider {
+  font-family: var(--cond);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ---------- 表單元件 ---------- */
+
+input,
+textarea,
+select {
+  border: none;
+  border-bottom: 2px solid var(--line);
+  border-radius: 0;
+  background: var(--panel);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+
+#room-code-input {
+  font-family: var(--cond);
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+button {
+  border: 2px solid var(--accent);
+  border-radius: 0;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+button:hover:not(:disabled) {
+  filter: none;
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+}
+
+button.secondary {
+  border: 2px solid var(--text);
+  background: transparent;
+  color: var(--text);
+}
+
+.leave,
+.leave:hover:not(:disabled) {
+  border: none;
+  background: none;
+  color: var(--muted);
+}
+
+.leave:hover:not(:disabled) { color: var(--text); }
+
+.theme-btn {
+  border: 2px solid var(--text);
+  border-radius: 0;
+  background: var(--card);
+  color: var(--text);
+}
+
+.theme-btn:hover:not(:disabled) {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.custom-box,
+.stats-box,
+.my-round,
+.category-note {
+  border: none;
+  border-left: 4px solid var(--line);
+  border-radius: 0;
+  background: var(--panel);
+}
+
+.tag {
+  border-radius: 0;
+  padding: 2px 7px;
+  background: var(--panel);
+  color: var(--text);
+  font-family: var(--cond);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.tag.me { background: var(--text); color: var(--bg); }
+.tag.wins { background: var(--online); color: #fff; }
+
+.kick-btn {
+  border: 2px solid var(--danger);
+  border-radius: 0;
+  background: transparent;
+  color: var(--danger);
+  letter-spacing: 0.04em;
+}
+
+.kick-btn:hover:not(:disabled) {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #fff;
+}
+
+.dot { border-radius: 0; width: 8px; height: 8px; }
+
+.error { border-radius: 0; border-left: 4px solid var(--danger); }
+
+/* ---------- Lobby ---------- */
+
+.room-code-box {
+  padding: 16px 18px 18px;
+  border: none;
+  border-radius: 0;
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.room-code-label { color: color-mix(in srgb, var(--accent-text) 65%, transparent); }
+
+.room-code {
+  margin: 0 0 12px;
+  font-family: var(--cond);
+  font-size: 4rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.18em;
+}
+
+.room-code-box button.secondary {
+  border-color: var(--accent-text);
+  color: var(--accent-text);
+}
+
+.room-code-box button.secondary:hover:not(:disabled) {
+  background: var(--accent-text);
+  color: var(--accent);
+}
+
+.player-list li {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+#player-count { font-family: var(--cond); font-size: 1.05rem; color: var(--text); }
+
+/* ---------- 比賽：上方計時列 ---------- */
+
+.race-head {
+  align-items: stretch;
+  gap: 1px;
+  margin: -28px -24px 18px;
+  background: var(--line);
+}
+
+.metric {
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  padding: 12px 18px 10px;
+  background: var(--card);
+}
+
+.metric span:first-child {
+  font-family: var(--cond);
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric small {
+  order: -1;
+  margin-bottom: 4px;
+  font-family: var(--cond);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.metric.right { align-items: flex-end; }
+
+/* ---------- 比賽：文章 ---------- */
+
+.article {
+  border: none;
+  border-left: 4px solid var(--text);
+  border-radius: 0;
+  background: var(--panel);
+}
+
+#art-done { color: var(--muted); }
+
+.cursor {
+  border-radius: 0;
+  background: var(--accent);
+  color: var(--accent-text);
+  box-shadow: none;
+}
+
+.cursor.error {
+  background: var(--danger);
+  color: #fff;
+  box-shadow: none;
+}
+
+/* ---------- 比賽：計時塔 ---------- */
+
+.track-list {
+  margin-top: 20px;
+  padding-top: 0;
+  border-top: 2px solid var(--text);
+}
+
+/* 每位選手一列：名次｜名字｜進度條｜速度 */
+.lane {
+  display: grid;
+  grid-template-columns: 34px minmax(80px, 150px) 1fr 104px;
+  grid-template-areas: "rank name track stat";
+  align-items: center;
+  gap: 0 12px;
+  margin: 0;
+  padding: 0 10px 0 0;
+  border-bottom: 1px solid var(--line);
+  min-height: 40px;
+}
+
+.lane-head { display: contents; }
+.lane-rank { grid-area: rank; }
+.lane .player-name { grid-area: name; }
+.lane .stat { grid-area: stat; }
+.lane .track { grid-area: track; }
+
+.lane-rank {
+  width: 34px;
+  height: 40px;
+  border-radius: 0;
+  background: var(--panel);
+  font-family: var(--cond);
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.lane[data-rank="1"] .lane-rank { background: var(--accent); color: var(--accent-text); }
+.lane.done .lane-rank { background: var(--online); color: #fff; }
+
+.lane .player-name { font-weight: 700; }
+.lane.mine { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+
+.lane .stat {
+  width: auto;
+  font-family: var(--cond);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.lane.done .stat { color: var(--online); }
+.lane.offline .stat { color: var(--muted); }
+
+/* 進度條：細細一條，跑者是一根直線標記，
+   標記左邊用超大的 box-shadow 填滿，被 overflow 裁掉後就變成進度條 */
+.track {
+  height: 10px;
+  border-radius: 0;
+  overflow: hidden;
+  background: var(--line);
+  box-shadow: none;
+}
+
+.runner {
+  top: 0;
+  width: 3px;
+  height: 100%;
+  border-radius: 0;
+  background: var(--text);
+  color: transparent;
+  font-size: 0;
+  box-shadow: -3000px 0 0 3000px var(--muted);
+}
+
+.lane.mine .runner { box-shadow: -3000px 0 0 3000px var(--accent); }
+.lane.done .runner { background: var(--online); box-shadow: -3000px 0 0 3000px var(--online); }
+.lane.offline .runner { opacity: 0.4; }
+
+/* ---------- 倒數：整塊黃色字卡 ---------- */
+
+.countdown {
+  border-radius: 0;
+  background: var(--accent);
+}
+
+.countdown span {
+  font-family: var(--cond);
+  font-size: 10rem;
+  font-weight: 800;
+  color: var(--accent-text);
+}
+
+/* ---------- 結果 ---------- */
+
+.result-title {
+  text-align: left;
+  font-size: 1.5rem;
+  font-weight: 900;
+}
+
+.result-list li {
+  gap: 12px;
+  padding: 0 10px 0 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  min-height: 46px;
+}
+
+.result-list li.mine { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+
+.rank {
+  width: 40px;
+  height: 46px;
+  border-radius: 0;
+  background: var(--panel);
+  font-family: var(--cond);
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.result-list li:first-child .rank {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.score {
+  font-family: var(--cond);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.score.dnf { color: var(--danger); }
+
+.my-round { text-align: left; }
+.my-speed { font-family: var(--cond); font-size: 1.3rem; font-weight: 700; }
+.my-speed.record { color: var(--best); }
+
+.standings li { border-radius: 0; border-bottom: 1px solid var(--line); }
+.standings li::before { font-family: var(--cond); font-size: 1rem; }
+.standings li.mine { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+
+#toast {
+  border-radius: 0;
+  border-left: 6px solid var(--accent);
+  background: var(--text);
+  color: var(--bg);
+}
+
+#banner { background: var(--danger); }
+
+/* ---------- 開發者專區 ---------- */
+
+.dev-card h2 { font-weight: 900; }
+
+.stats-grid strong { font-family: var(--cond); font-size: 1.4rem; }
+
+.room-row-code { font-family: var(--cond); font-size: 1.2rem; }
+
+.design-option { border-radius: 0; }
+
+/* ---------- 深色模式微調 ----------
+   亮色版靠大塊黃色撐場面；深色底上同樣的大色塊太刺眼，
+   所以大面積改成「深色底＋黃色內容」，黃色只留給小色塊（按鈕、名次、游標）。 */
+
+:root[data-theme="dark"] .card { border-top-color: var(--accent); }
+
+:root[data-theme="dark"] .room-code-box {
+  border-left: 6px solid var(--accent);
+  background: var(--panel);
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .room-code-label { color: var(--muted); }
+:root[data-theme="dark"] .room-code { color: var(--accent); }
+
+:root[data-theme="dark"] .room-code-box button.secondary {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .room-code-box button.secondary:hover:not(:disabled) {
+  background: var(--text);
+  color: var(--bg);
+}
+
+:root[data-theme="dark"] .countdown {
+  background: color-mix(in srgb, var(--card) 94%, transparent);
+}
+
+:root[data-theme="dark"] .countdown span { color: var(--accent); }
+
+:root[data-theme="dark"] .article { border-left-color: var(--muted); }
+
+/* 自己那一列：黃色調淡疊在深色上會變成髒褐色，改成淺一階的面板＋黃色名字 */
+:root[data-theme="dark"] .lane.mine,
+:root[data-theme="dark"] .result-list li.mine,
+:root[data-theme="dark"] .standings li.mine {
+  background: var(--panel);
+}
+
+:root[data-theme="dark"] .lane.mine .player-name,
+:root[data-theme="dark"] .result-list li.mine .player-name,
+:root[data-theme="dark"] .standings li.mine .player-name {
+  color: var(--accent);
+}
+
+/* 用 :where 降低權重，領先者（黃）與完成者（綠）的名次格才蓋得過去 */
+:where(:root[data-theme="dark"]) .lane-rank,
+:where(:root[data-theme="dark"]) .rank { background: var(--input-bg); }
+
+:root[data-theme="dark"] .tag.me { background: var(--muted); color: var(--bg); }
+
+:root[data-theme="dark"] .custom-box,
+:root[data-theme="dark"] .stats-box,
+:root[data-theme="dark"] .my-round,
+:root[data-theme="dark"] .category-note { background: var(--input-bg); }
+
+/* ---------- 手機 ---------- */
+
+@media (max-width: 520px) {
+  .race-head { margin: -28px -24px 14px; }
+  .metric { padding: 10px 12px 8px; }
+  .metric span:first-child { font-size: 1.9rem; }
+
+  .lane {
+    grid-template-columns: 30px 1fr 84px;
+    grid-template-areas:
+      "rank name stat"
+      "rank track track";
+    gap: 4px 10px;
+    padding: 6px 8px 8px 0;
+  }
+
+  .lane-rank { height: 100%; min-height: 44px; }
+}

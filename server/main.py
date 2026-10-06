@@ -1,15 +1,17 @@
 """中文打字競速 —— 伺服器進入點。
 
 只負責 WebSocket 的收發與訊息分派；
-房間與比賽的狀態機在 rooms.py，計分在 scoring.py，文章在 texts.py。
+房間與比賽的狀態機在 rooms.py，計分在 scoring.py，文章在 texts.py，
+開發者專區的 API 在 dev.py。
 """
 
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from server import config
+from server import config, dev
 from server.rooms import RoomError, RoomManager
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -17,12 +19,24 @@ STATIC_DIR = BASE_DIR / "static"
 
 app = FastAPI(title="zh-TW Typing Competition")
 manager = RoomManager()
+app.include_router(dev.create_router(manager))
 
 
 @app.get("/health")
 def health():
     """給雲端平台檢查服務是否還活著用的。"""
-    return {"status": "ok", "rooms": len(manager.rooms)}
+    return {"status": "ok", "rooms": len(manager.rooms), "version": config.VERSION}
+
+
+@app.get("/designs/site.css")
+def site_design():
+    """目前全站的介面設計。每個頁面都載入這個網址，開發者專區切換設計後所有人重新整理就套用。"""
+    headers = {"Cache-Control": "no-cache"}  # 每次都向伺服器確認，切換後才不會卡在舊的
+    path = STATIC_DIR / "designs" / f"{config.SITE_DESIGN}.css"
+    if config.SITE_DESIGN == "classic" or not path.is_file():
+        # classic 就是 style.css 本身，不用再疊任何樣式
+        return Response("/* classic */", media_type="text/css", headers=headers)
+    return FileResponse(path, media_type="text/css", headers=headers)
 
 
 async def _reject(ws: WebSocket, message: str) -> None:
@@ -100,6 +114,24 @@ async def handle_message(room, player, message: dict) -> None:
     elif kind == "restart":
         try:
             await manager.restart(room, player)
+        except RoomError as exc:
+            await player.ws.send_json({"type": "notice", "message": str(exc)})
+
+    elif kind == "stop":
+        try:
+            await manager.stop_game(room, player)
+        except RoomError as exc:
+            await player.ws.send_json({"type": "notice", "message": str(exc)})
+
+    elif kind == "kick":
+        try:
+            await manager.kick(room, player, str(message.get("playerId") or ""))
+        except RoomError as exc:
+            await player.ws.send_json({"type": "notice", "message": str(exc)})
+
+    elif kind == "reset_scores":
+        try:
+            await manager.reset_scores(room, player)
         except RoomError as exc:
             await player.ws.send_json({"type": "notice", "message": str(exc)})
 

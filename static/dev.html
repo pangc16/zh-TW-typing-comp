@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>開發者專區 · 中文打字競速</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/theme.js"></script>
+</head>
+<body>
+  <div id="toast" class="hidden"></div>
+
+  <button id="theme-btn" class="theme-btn" type="button" aria-label="切換亮色／暗色模式" title="切換亮色／暗色模式">
+    <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 1.5v3M12 19.5v3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M1.5 12h3M19.5 12h3M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/></svg>
+  </button>
+
+  <div class="app wide">
+    <header class="brand">
+      <h1 class="dev-title">開發者專區</h1>
+    </header>
+
+    <!-- 登入 -->
+    <section id="login" class="card">
+      <form id="login-form">
+        <div class="field">
+          <label for="password-input">開發者密碼</label>
+          <input id="password-input" type="password" autocomplete="current-password">
+        </div>
+        <button type="submit">進入</button>
+      </form>
+      <div id="login-error" class="error hidden"></div>
+      <a class="dev-link" href="/">← 回遊戲首頁</a>
+    </section>
+
+    <div id="panel" class="hidden">
+      <!-- 伺服器狀態 -->
+      <section class="card dev-card">
+        <div class="dev-card-head">
+          <h2>伺服器狀態</h2>
+          <span class="hint-inline" id="status-updated">—</span>
+        </div>
+        <div class="stats-grid stats-grid-4" id="status-grid"></div>
+        <div class="section-head dev-sub"><span>房間</span></div>
+        <div id="room-list" class="room-list"></div>
+        <div class="stats-sub" id="category-summary"></div>
+      </section>
+
+      <!-- 測試工具 -->
+      <section class="card dev-card">
+        <div class="dev-card-head"><h2>測試工具</h2></div>
+
+        <div class="section-head dev-sub"><span>機器人對手</span></div>
+        <p class="stats-sub">先到遊戲開一間房間，再把房號填在這裡。機器人會跟真人一樣倒數、打字、算排名。</p>
+        <form id="bot-form" class="inline-form">
+          <div class="field">
+            <label for="bot-room">房號</label>
+            <input id="bot-room" type="text" maxlength="4" placeholder="ABCD" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="bot-count">數量</label>
+            <input id="bot-count" type="number" min="1" max="7" value="1">
+          </div>
+          <div class="field">
+            <label for="bot-cpm">速度（字/分）</label>
+            <input id="bot-cpm" type="number" min="10" max="1000" value="120">
+          </div>
+          <button type="submit">加入機器人</button>
+        </form>
+        <button id="bot-clear" class="secondary">移除這間房的機器人</button>
+        <a class="dev-link" href="/" target="_blank">開新分頁到遊戲首頁 ↗</a>
+
+        <div class="section-head dev-sub"><span>全站公告</span></div>
+        <p class="stats-sub">送一則訊息給目前所有在線的玩家，會在他們畫面下方跳出來。</p>
+        <form id="announce-form" class="inline-form">
+          <div class="field grow">
+            <label for="announce-text">公告內容</label>
+            <input id="announce-text" type="text" maxlength="100" placeholder="例如：伺服器 5 分鐘後更新">
+          </div>
+          <button type="submit">發送</button>
+        </form>
+      </section>
+
+      <!-- 介面設計 -->
+      <section class="card dev-card">
+        <div class="dev-card-head"><h2>介面設計</h2></div>
+
+        <div class="section-head"><span>全站設計</span></div>
+        <p class="stats-sub">
+          所有玩家看到的樣子，切換後大家重新整理網頁就會套用。
+          跟其他設定一樣只存在記憶體：伺服器重啟後回到 server/config.py 的 SITE_DESIGN。
+        </p>
+        <div class="design-options" id="site-design-options"></div>
+
+        <div class="section-head dev-sub"><span>只在我的瀏覽器預覽</span></div>
+        <p class="stats-sub">試新設計用，只影響你這個瀏覽器，其他玩家看不到。</p>
+        <div class="design-options" id="design-options">
+          <label class="design-option">
+            <input type="radio" name="design" value="">
+            <span><strong>跟隨全站設計</strong><small>跟其他玩家看到的一樣</small></span>
+          </label>
+          <label class="design-option">
+            <input type="radio" name="design" value="timing">
+            <span><strong>賽事計時看板</strong><small>F1 計時塔、運動轉播字卡：純色塊、窄體粗字、等寬數字</small></span>
+          </label>
+          <label class="design-option">
+            <input type="radio" name="design" value="classic">
+            <span><strong>原始版</strong><small>第一版的藍色圓角介面</small></span>
+          </label>
+        </div>
+        <a class="dev-link" href="/" target="_blank">開新分頁到遊戲首頁 ↗</a>
+      </section>
+
+      <!-- 設定 -->
+      <section class="card dev-card">
+        <div class="dev-card-head"><h2>設定</h2></div>
+        <p class="stats-sub">改完立刻生效，但只存在記憶體裡：伺服器重啟後會回到 server/config.py 的預設值。</p>
+        <form id="settings-form">
+          <div id="settings-fields" class="settings-grid"></div>
+          <button type="submit">儲存設定</button>
+        </form>
+
+        <div class="section-head dev-sub"><span>文章庫</span></div>
+        <p class="stats-sub">改完 data/articles.txt 後按這裡重新讀取，不用重啟伺服器。</p>
+        <button id="reload-articles" class="secondary">重新載入文章庫</button>
+      </section>
+
+      <button id="logout" class="leave">登出</button>
+      <a class="dev-link" href="/">← 回遊戲首頁</a>
+    </div>
+  </div>
+
+  <script src="/dev.js"></script>
+</body>
+</html>

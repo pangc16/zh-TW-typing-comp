@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *.egg-info/
+.pytest_cache/
 
 # 虛擬環境（每台電腦自己建，不要上傳）
 .venv/

@@ -5,15 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>中文打字競速</title>
   <link rel="stylesheet" href="/style.css">
+  <script src="/theme.js"></script>
 </head>
 <body>
   <div id="banner" class="hidden">連線中斷，正在重新連線…</div>
   <div id="toast" class="hidden"></div>
 
+  <button id="theme-btn" class="theme-btn" type="button" aria-label="切換亮色／暗色模式" title="切換亮色／暗色模式">
+    <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 1.5v3M12 19.5v3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M1.5 12h3M19.5 12h3M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/></svg>
+  </button>
+
   <div class="app">
     <header class="brand">
       <h1>中文打字競速</h1>
-      <span class="beta">測試版</span>
+      <span class="beta hidden" id="version-badge"></span>
     </header>
 
     <!-- 畫面 1：進入 -->
@@ -36,6 +42,15 @@
       <button id="join-btn" class="secondary">加入房間</button>
 
       <div id="home-error" class="error hidden"></div>
+
+      <details id="my-stats" class="stats-box hidden">
+        <summary>我的紀錄</summary>
+        <div class="stats-grid" id="stats-grid"></div>
+        <div class="stats-sub" id="stats-misses"></div>
+        <button id="clear-stats-btn" class="leave">清除紀錄</button>
+      </details>
+
+      <a class="dev-link" href="/dev.html">開發者專區</a>
     </section>
 
     <!-- 畫面 2：Lobby -->
@@ -67,6 +82,7 @@
 
       <button id="start-btn">開始遊戲</button>
       <p class="hint" id="lobby-hint"></p>
+      <button id="reset-scores-btn" class="leave hidden">重設勝場</button>
 
       <button id="leave-btn" class="leave">離開房間</button>
     </section>
@@ -75,6 +91,7 @@
     <section id="screen-race" class="card hidden">
       <div class="race-head">
         <div class="metric"><span id="race-timer">0.0</span><small>秒</small></div>
+        <div class="metric"><span id="race-cpm">0</span><small>字/分</small></div>
         <div class="metric right"><span id="race-progress">0 / 0</span><small>字</small></div>
       </div>
 
@@ -84,17 +101,27 @@
                 autocomplete="off" autocapitalize="off" spellcheck="false" disabled></textarea>
       <p class="hint" id="typing-hint"></p>
 
-      <ul class="progress-list" id="progress-list"></ul>
+      <ul class="track-list" id="track-list"></ul>
       <p class="hint" id="grace-hint"></p>
+      <button id="stop-btn" class="secondary stop hidden">結束比賽</button>
 
       <div id="countdown" class="countdown hidden"><span id="countdown-number">3</span></div>
     </section>
 
     <!-- 畫面 4：結果 -->
     <section id="screen-result" class="card hidden">
-      <h2 class="result-title">比賽結果</h2>
+      <h2 class="result-title" id="result-title">比賽結果</h2>
       <ol class="result-list" id="result-list"></ol>
+
+      <div class="my-round" id="my-round"></div>
+
+      <div id="standings-box" class="hidden">
+        <div class="section-head"><span>累計勝場</span><span id="standings-round"></span></div>
+        <ol class="standings" id="standings"></ol>
+      </div>
+
       <button id="again-btn">再來一局</button>
+      <button id="lobby-btn" class="secondary">回到 Lobby</button>
       <p class="hint" id="result-hint"></p>
       <button id="leave-btn-2" class="leave">離開房間</button>
     </section>
