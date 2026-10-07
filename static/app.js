@@ -108,6 +108,13 @@ let tickTimer = null;
 // 只看不打：看得到所有人的進度，但不是玩家，也不會寫進個人紀錄。
 const spectateCode = (new URLSearchParams(location.search).get("spectate") || "").trim().toUpperCase();
 const spectating = spectateCode !== "";
+// 觀戰時指定要看的玩家（點跑道切換）；null 代表自動跟著領先者
+let focusId = null;
+// 自動跟領先者時的防抖：新的領先者要維持領先一段時間才換人，兩個人一直互相超車時畫面才不會跳來跳去
+const LEADER_SWITCH_DELAY = 1500;  // 毫秒
+let autoLeaderId = null;    // 目前自動跟著的人
+let leaderCandidate = null; // 想取代他的新領先者
+let candidateSince = 0;     // 新領先者從什麼時候開始領先
 
 // 這一局自己的打錯紀錄。存一份在 sessionStorage，重新整理也不會不見。
 // { raceId, errors, misses: {字: 次數}, wasError, summary }
@@ -533,6 +540,7 @@ function runCountdown(seconds) {
   $("grace-hint").textContent = "";
   $("race-timer").textContent = "0.0";
   overlay.classList.remove("hidden");
+  autoLeaderId = null;  // 新的一局重新判斷要跟誰
 
   let remaining = seconds;
   number.textContent = String(remaining);
@@ -580,6 +588,10 @@ function stopTimer() {
 }
 
 function tick() {
+  if (spectating) {
+    spectatorTick();
+    return;
+  }
   const self = me();
   if (self && self.seconds !== null) {
     // 已完成 → 顯示伺服器算出來的正式秒數並停錶
@@ -592,26 +604,80 @@ function tick() {
   if (raceStart !== null) {
     const elapsed = (performance.now() - raceStart) / 1000;
     $("race-timer").textContent = elapsed.toFixed(1);
-    // 觀戰時沒有自己的輸入，速度改顯示領先者的
-    const done = spectating
-      ? leaderProgress()
-      : commonPrefixLength(normalize($("typing-input").value), article);
-    $("race-cpm").textContent = String(cpmOf(done, elapsed));
+    const typed = normalize($("typing-input").value);
+    $("race-cpm").textContent = String(cpmOf(commonPrefixLength(typed, article), elapsed));
   }
   if (room && room.state === "racing") renderTrack();
 }
 
 // ---------- 文章顯示 ----------
 
-/** 觀戰用：目前打最多字的人打到哪裡。 */
-function leaderProgress() {
-  return room ? Math.max(0, ...room.players.map((p) => p.progress)) : 0;
+// ---------- 觀戰：要看誰 ----------
+
+/** 觀戰中正在看的玩家：有指定就看他，沒有就看還沒完成的人裡面領先的那位（有防抖）。 */
+function watchedPlayer() {
+  if (!room || room.players.length === 0) return null;
+  const chosen = room.players.find((p) => p.id === focusId);
+  if (chosen) return chosen;
+
+  const byId = new Map(room.players.map((p) => [p.id, p]));
+  const order = standingOrder().map((id) => byId.get(id));
+  const leader = order.find((p) => p.seconds === null) || order[0];
+  const current = byId.get(autoLeaderId);
+
+  // 還沒在跟誰、原本跟的人離開了、或他已經完成 → 立刻換，不用等
+  if (!current || (current.seconds !== null && leader.seconds === null)) {
+    autoLeaderId = leader.id;
+    leaderCandidate = null;
+    return leader;
+  }
+  if (leader.id === current.id) {
+    leaderCandidate = null;
+    return current;
+  }
+  // 有人超前了：先記下來，維持領先夠久才真的換過去
+  const now = performance.now();
+  if (leaderCandidate !== leader.id) {
+    leaderCandidate = leader.id;
+    candidateSince = now;
+  } else if (now - candidateSince >= LEADER_SWITCH_DELAY) {
+    autoLeaderId = leader.id;
+    leaderCandidate = null;
+    return leader;
+  }
+  return current;
+}
+
+/** 點跑道：指定看這個人；再點一次同一個人就回到自動跟著領先者。 */
+function toggleFocus(playerId) {
+  focusId = focusId === playerId ? null : playerId;
+  renderTrack();
+  refreshArticle();
+  spectatorTick();
+}
+
+function spectatorTick() {
+  const watched = watchedPlayer();
+  const name = watched ? watched.nickname : "—";
+  $("spectate-focus").textContent = focusId ? `正在看：${name}` : `自動跟著領先者（${name}）`;
+  if (watched && watched.seconds !== null) {
+    $("race-timer").textContent = watched.seconds.toFixed(1);
+    $("race-cpm").textContent = String(cpmOf(room.total, watched.seconds));
+  } else if (raceStart !== null) {
+    const elapsed = (performance.now() - raceStart) / 1000;
+    $("race-timer").textContent = elapsed.toFixed(1);
+    $("race-cpm").textContent = String(cpmOf(watched ? watched.progress : 0, elapsed));
+  }
+  if (room && room.state === "racing") renderTrack();
 }
 
 function refreshArticle() {
   const typed = spectating ? "" : normalize($("typing-input").value);
-  // 觀戰時游標跟著領先者走
-  const prefix = spectating ? leaderProgress() : commonPrefixLength(typed, article);
+  // 觀戰時游標跟著正在看的人走
+  const watched = spectating ? watchedPlayer() : null;
+  const prefix = spectating
+    ? (watched ? watched.progress : 0)
+    : commonPrefixLength(typed, article);
   const hasError = typed.length > prefix;
 
   $("art-done").textContent = article.slice(0, prefix);
@@ -654,6 +720,10 @@ function buildLane() {
       <span class="stat"></span>
     </div>
     <div class="track"><div class="runner"></div></div>`;
+  if (spectating) {
+    li.title = "點一下只看這個人，再點一次回到跟著領先者";
+    li.addEventListener("click", () => toggleFocus(li.dataset.id));
+  }
   return li;
 }
 
@@ -735,10 +805,15 @@ function renderTrack() {
   }
   reorderLanes(list, displayOrder.map((id) => lanes.get(id)));
 
+  const watched = spectating ? watchedPlayer() : null;
+
   for (const player of room.players) {
     const lane = lanes.get(player.id);
     const done = player.seconds !== null;
-    lane.classList.toggle("mine", player.id === myId);
+    lane.dataset.id = player.id;
+    // 觀戰時把正在看的那位標成跟「自己」一樣醒目
+    const watching = spectating && watched !== null && player.id === watched.id;
+    lane.classList.toggle("mine", spectating ? watching : player.id === myId);
     lane.classList.toggle("offline", !player.online);
     lane.classList.toggle("done", done);
 
@@ -747,7 +822,8 @@ function renderTrack() {
     lane.dataset.rank = String(position);  // 讓樣式可以標出領先者
     // 用 textContent 而不是 innerHTML：暱稱是別人輸入的
     lane.querySelector(".player-name").textContent =
-      player.id === myId ? `${player.nickname}（你）` : player.nickname;
+      player.id === myId ? `${player.nickname}（你）`
+        : watching ? `👁 ${player.nickname}` : player.nickname;
 
     let stat;
     if (done) stat = `完成 ${player.seconds.toFixed(1)} 秒`;

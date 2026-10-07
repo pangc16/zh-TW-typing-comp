@@ -821,6 +821,8 @@ select option:disabled {
   font-size: 0.75rem;
 }
 
+body.spectating .lane { cursor: pointer; }
+
 /* 觀戰時把只有玩家／房主會用到的東西都藏起來 */
 body.spectating #copy-btn,
 body.spectating #category-field,
