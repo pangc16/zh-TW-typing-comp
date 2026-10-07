@@ -15,17 +15,45 @@ def test_password_required(server):
 
 def test_multiple_passwords(monkeypatch):
     monkeypatch.setenv("DEV_PASSWORD", " aaa111 , bbb222,,")
-    passwords = dev.dev_passwords()
-    assert passwords == ["aaa111", "bbb222"]
-    assert dev.password_matches("aaa111", passwords)
-    assert dev.password_matches("bbb222", passwords)
-    assert not dev.password_matches("aaa111,bbb222", passwords)
-    assert not dev.password_matches("", passwords)
+    accounts = dev.dev_accounts()
+    assert accounts == [("", "aaa111"), ("", "bbb222")]
+    assert dev.match_account("aaa111", accounts) == ""
+    assert dev.match_account("bbb222", accounts) == ""
+    assert dev.match_account("aaa111,bbb222", accounts) is None
+    assert dev.match_account("", accounts) is None
+
+
+def test_named_passwords(monkeypatch):
+    monkeypatch.setenv("DEV_PASSWORD", "小明:aaa111, 小美 : bbb:222 ,ccc333")
+    accounts = dev.dev_accounts()
+    assert accounts == [("小明", "aaa111"), ("小美", "bbb:222"), ("", "ccc333")]
+    assert dev.match_account("aaa111", accounts) == "小明"
+    assert dev.match_account("bbb:222", accounts) == "小美"
+    assert dev.match_account("ccc333", accounts) == ""
+    assert dev.match_account("小明:aaa111", accounts) is None
+
+
+def test_profiles(monkeypatch):
+    monkeypatch.setenv(
+        "DEV_PROFILES",
+        " 小明 | 主要開發者 | https://example.com/a.png ;小美|文章庫維護;;阿華||javascript:alert(1)",
+    )
+    assert dev.dev_profiles() == {
+        "小明": {"subtitle": "主要開發者", "avatar": "https://example.com/a.png"},
+        "小美": {"subtitle": "文章庫維護", "avatar": ""},
+        "阿華": {"subtitle": "", "avatar": ""},
+    }
+
+
+def test_me_returns_name(server):
+    status, data = server.api("GET", "/me")
+    assert status == 200
+    assert data == {"name": "", "avatar": "", "subtitle": ""}
 
 
 def test_no_password_disables_dev_area(monkeypatch):
     monkeypatch.delenv("DEV_PASSWORD", raising=False)
-    assert dev.dev_passwords() == []
+    assert dev.dev_accounts() == []
 
 
 def test_settings_validation(server):

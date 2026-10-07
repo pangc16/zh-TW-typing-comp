@@ -35,6 +35,16 @@
     </section>
 
     <div id="panel" class="hidden">
+      <!-- 登入者 -->
+      <section class="card dev-card dev-hello">
+        <div class="dev-avatar" id="dev-avatar" aria-hidden="true">開</div>
+        <div class="dev-hello-text">
+          <div class="dev-hello-name">嗨，<span id="dev-name">開發者</span></div>
+          <div class="dev-hello-sub" id="dev-hello-sub">已登入開發者專區</div>
+        </div>
+        <button id="logout" class="secondary small" type="button">登出</button>
+      </section>
+
       <!-- 伺服器狀態 -->
       <section class="card dev-card">
         <div class="dev-card-head">
@@ -126,7 +136,6 @@
         <button id="reload-articles" class="secondary">重新載入文章庫</button>
       </section>
 
-      <button id="logout" class="leave">登出</button>
       <a class="dev-link" href="/">← 回遊戲首頁</a>
     </div>
   </div>

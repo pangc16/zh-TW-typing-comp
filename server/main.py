@@ -142,5 +142,18 @@ async def handle_message(room, player, message: dict) -> None:
             await manager.broadcast(room)
 
 
+class NoCacheStaticFiles(StaticFiles):
+    """每次都向伺服器確認檔案有沒有改。
+
+    不加的話瀏覽器會自己猜快取多久，更新版本後玩家可能還在跑舊的 app.js。
+    檔案沒變時伺服器只回 304，不會重新下載，所以幾乎沒有額外負擔。
+    """
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 # 掛在最後面：把 static/ 當成網站根目錄，/ 會自動送出 index.html
-app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
+app.mount("/", NoCacheStaticFiles(directory=STATIC_DIR, html=True), name="static")

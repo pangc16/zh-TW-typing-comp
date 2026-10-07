@@ -16,30 +16,44 @@
     <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 1.5v3M12 19.5v3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M1.5 12h3M19.5 12h3M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/></svg>
   </button>
 
+  <a id="dev-corner" class="dev-corner" href="/dev.html">開發者專區</a>
+
   <div class="app">
     <header class="brand">
       <h1>中文打字競速</h1>
       <span class="beta hidden" id="version-badge"></span>
     </header>
 
-    <!-- 畫面 1：進入 -->
+    <!-- 畫面 1：進入（分三步：暱稱 → 建立或加入 → 輸入房號） -->
     <section id="screen-home" class="card">
-      <div class="field">
-        <label for="nickname-input">你的暱稱</label>
-        <input id="nickname-input" type="text" maxlength="12" placeholder="例如：小明" autocomplete="off">
+      <!-- 步驟 1：暱稱 -->
+      <div id="step-name">
+        <div class="field">
+          <label for="nickname-input">你的暱稱</label>
+          <input id="nickname-input" type="text" maxlength="12" placeholder="例如：小明" autocomplete="off">
+        </div>
+        <button id="name-next-btn">下一步</button>
       </div>
 
-      <button id="create-btn">建立房間</button>
-
-      <div class="divider">或加入朋友的房間</div>
-
-      <div class="field">
-        <label for="room-code-input">房號</label>
-        <input id="room-code-input" type="text" maxlength="4" placeholder="ABCD" autocomplete="off"
-               autocapitalize="characters" spellcheck="false">
+      <!-- 步驟 2：建立或加入 -->
+      <div id="step-choose" class="hidden">
+        <p class="greeting">嗨，<strong id="greeting-name"></strong>
+          <button id="rename-btn" class="text-btn" type="button">改暱稱</button></p>
+        <button id="create-btn">建立房間</button>
+        <div class="divider">或</div>
+        <button id="join-btn" class="secondary">加入房間</button>
       </div>
 
-      <button id="join-btn" class="secondary">加入房間</button>
+      <!-- 步驟 3：輸入房號 -->
+      <div id="step-join" class="hidden">
+        <div class="field">
+          <label for="room-code-input">房號</label>
+          <input id="room-code-input" type="text" maxlength="4" placeholder="ABCD" autocomplete="off"
+                 autocapitalize="characters" spellcheck="false">
+        </div>
+        <button id="join-go-btn">加入</button>
+        <button id="join-back-btn" class="leave" type="button">返回</button>
+      </div>
 
       <div id="home-error" class="error hidden"></div>
 
@@ -49,8 +63,6 @@
         <div class="stats-sub" id="stats-misses"></div>
         <button id="clear-stats-btn" class="leave">清除紀錄</button>
       </details>
-
-      <a class="dev-link" href="/dev.html">開發者專區</a>
     </section>
 
     <!-- 畫面 2：Lobby -->

@@ -151,6 +151,28 @@ button.secondary {
 
 .leave:hover:not(:disabled) { color: var(--text); }
 
+.text-btn,
+.text-btn:hover:not(:disabled) {
+  border: none;
+  background: none;
+  color: var(--muted);
+}
+
+.text-btn:hover:not(:disabled) { color: var(--text); }
+
+.dev-corner {
+  border: 2px solid var(--text);
+  border-radius: 0;
+  font-family: var(--cond);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.dev-corner:hover {
+  background: var(--text);
+  color: var(--bg);
+}
+
 .theme-btn {
   border: 2px solid var(--text);
   border-radius: 0;
@@ -461,6 +483,26 @@ button.secondary {
 /* ---------- 開發者專區 ---------- */
 
 .dev-card h2 { font-weight: 900; }
+
+/* 歡迎列做成轉播的選手字卡：方形號碼牌＋窄體粗字 */
+.dev-avatar {
+  border-radius: 0;
+  font-weight: 900;
+}
+
+.dev-hello-name {
+  font-weight: 900;
+  font-size: 1.4rem;
+  letter-spacing: 0.02em;
+}
+
+.dev-hello-sub {
+  font-family: var(--cond);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
 
 .stats-grid strong { font-family: var(--cond); font-size: 1.4rem; }
 

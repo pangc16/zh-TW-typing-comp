@@ -77,7 +77,8 @@ Render 上的設定：
 | --- | --- |
 | Build Command | `pip install -r requirements.txt` |
 | Start Command | `uvicorn server.main:app --host 0.0.0.0 --port $PORT` |
-| Environment → `DEV_PASSWORD` | 開發者專區的密碼，請設夠長的；可以用逗號分隔多組（例如 `aaa111,bbb222`），任一組都能登入；不設的話專區停用 |
+| Environment → `DEV_PASSWORD` | 開發者專區的密碼，請設夠長的；可以用逗號分隔多組（例如 `aaa111,bbb222`），任一組都能登入；每組前面加「名字:」（例如 `小明:aaa111,小美:bbb222`）登入後會顯示「嗨，小明」；不設的話專區停用 |
+| Environment → `DEV_PROFILES` | （選填）開發者專區歡迎列的副標與頭像，格式 `名字\|副標\|頭像圖片網址`，多人用分號隔開，例如 `小明\|主要開發者\|https://github.com/xiaoming.png;小美\|文章庫維護`；名字要跟 `DEV_PASSWORD` 裡的一樣 |
 
 `--host 0.0.0.0` 和 `--port $PORT` 都是必要的：容器裡必須聽所有來源，
 而 port 號由平台透過環境變數指定，不能寫死。
@@ -86,7 +87,7 @@ Render 上的設定：
 
 ## 開發者專區
 
-首頁最下面的「開發者專區」連結（`/dev.html`），輸入 `DEV_PASSWORD` 的密碼進入：
+首頁右下角的「開發者專區」小卡片（`/dev.html`），輸入 `DEV_PASSWORD` 的密碼進入：
 
 - **伺服器狀態**：運作時間、房間數、在線人數、每間房間的狀態與玩家，每 3 秒更新；可以強制關閉房間，或幫房間換房號（例如改成好記的 `TEST`）。
   換房號後房裡的人會自動跟上；舊房號只給當下斷線的人重連用，拿舊連結的新玩家進不來

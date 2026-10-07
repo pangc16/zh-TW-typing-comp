@@ -69,8 +69,9 @@ function formatUptime(seconds) {
 
 async function login(candidate) {
   password = candidate;
+  let me;
   try {
-    await api("GET", "/status");
+    me = await api("GET", "/me");
   } catch (error) {
     password = "";
     const box = $("login-error");
@@ -80,6 +81,13 @@ async function login(candidate) {
   }
   // 存在 sessionStorage：關掉分頁就要重新輸入
   try { sessionStorage.setItem(KEY_PASSWORD, candidate); } catch { /* 忽略 */ }
+  // DEV_PASSWORD 裡這組密碼沒寫名字的話，就叫「開發者」
+  const name = me.name || "開發者";
+  $("dev-name").textContent = name;
+  showAvatar(me.avatar, name);
+  // 副標在環境變數 DEV_PROFILES 設定（見 server/dev.py）；沒設定就顯示登入時間
+  const time = new Date().toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false });
+  $("dev-hello-sub").textContent = me.subtitle || `已登入開發者專區 · ${time}`;
   $("login-error").classList.add("hidden");
   $("login").classList.add("hidden");
   $("panel").classList.remove("hidden");
@@ -88,6 +96,17 @@ async function login(candidate) {
   loadSiteDesign();
   clearInterval(statusTimer);
   statusTimer = setInterval(refreshStatus, 3000);
+}
+
+/** 有設定頭像圖片就顯示圖片；沒設定或圖片讀不到，就顯示名字的第一個字。 */
+function showAvatar(url, name) {
+  const box = $("dev-avatar");
+  box.textContent = Array.from(name)[0];
+  if (!url) return;
+  const img = document.createElement("img");
+  img.alt = "";
+  img.addEventListener("load", () => box.replaceChildren(img));
+  img.src = url;
 }
 
 function logout(message) {

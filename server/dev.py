@@ -2,6 +2,12 @@
 
 全部都要在 header 帶 X-Dev-Password，值要等於環境變數 DEV_PASSWORD 裡的其中一組。
 DEV_PASSWORD 可以用逗號分隔多組密碼，例如「aaa111,bbb222」，方便分給不同的人。
+每組前面可以加「名字:」，例如「小明:aaa111,小美:bbb222」，登入後專區會顯示「嗨，小明」。
+
+每個人的副標與頭像放在環境變數 DEV_PROFILES（不寫在程式碼裡，GitHub 上就看不到），格式：
+    名字|副標|頭像圖片網址;名字|副標|頭像圖片網址
+例如「小明|主要開發者|https://github.com/xiaoming.png;小美|文章庫維護」。
+人與人之間用分號隔開；副標或頭像不需要就留空或省略。
 沒設定 DEV_PASSWORD 時整個專區停用，避免上線後忘了設密碼就門戶大開。
 """
 
@@ -33,18 +39,46 @@ EDITABLE_SETTINGS = {
 BOT_NAMES = ["打字機器人", "鍵盤俠", "注音達人", "倉頡小子", "嘸蝦米", "快打旋風", "無影手", "一指神功"]
 
 
-def dev_passwords() -> list[str]:
-    """DEV_PASSWORD 用逗號分隔多組密碼，前後空白不算，空的忽略。"""
+def dev_accounts() -> list[tuple[str, str]]:
+    """把 DEV_PASSWORD 拆成 (名字, 密碼) 清單。
+
+    逗號分隔多組，前後空白不算，空的忽略。「名字:密碼」用第一個冒號切開；
+    名字裡不能有冒號，密碼可以；沒寫名字的那組名字是空字串。
+    """
     raw = os.environ.get("DEV_PASSWORD", "")
-    return [item.strip() for item in raw.split(",") if item.strip()]
+    accounts = []
+    for item in raw.split(","):
+        name, _, password = item.partition(":") if ":" in item else ("", "", item)
+        name, password = name.strip(), password.strip()
+        if password:
+            accounts.append((name, password))
+    return accounts
 
 
-def password_matches(candidate: str, passwords: list[str]) -> bool:
+def dev_profiles() -> dict[str, dict[str, str]]:
+    """把 DEV_PROFILES 拆成 {名字: {"subtitle": ..., "avatar": ...}}。"""
+    raw = os.environ.get("DEV_PROFILES", "")
+    profiles = {}
+    for item in raw.split(";"):
+        name, subtitle, avatar = (item.split("|", 2) + ["", ""])[:3]
+        name = name.strip()
+        if not name:
+            continue
+        avatar = avatar.strip()
+        # 只接受 http(s) 網址，避免 javascript: 之類的東西被塞進 <img src>
+        if not avatar.startswith(("https://", "http://")):
+            avatar = ""
+        profiles[name] = {"subtitle": subtitle.strip(), "avatar": avatar}
+    return profiles
+
+
+def match_account(candidate: str, accounts: list[tuple[str, str]]) -> str | None:
+    """密碼對了就回傳那組的名字（沒寫名字是空字串），都不對回傳 None。"""
     # 每一組都比過一遍、而且用固定時間的比較，回應時間才不會透露是哪一組接近
-    matched = False
-    for password in passwords:
+    matched = None
+    for name, password in accounts:
         if secrets.compare_digest(candidate.encode(), password.encode()):
-            matched = True
+            matched = name
     return matched
 
 
@@ -83,13 +117,15 @@ class DesignRequest(BaseModel):
 def create_router(manager: RoomManager) -> APIRouter:
     router = APIRouter(prefix="/api/dev")
 
-    async def require_password(x_dev_password: str = Header(default="")) -> None:
-        passwords = dev_passwords()
-        if not passwords:
+    async def require_password(x_dev_password: str = Header(default="")) -> str:
+        accounts = dev_accounts()
+        if not accounts:
             raise HTTPException(503, "開發者專區未啟用：請先設定環境變數 DEV_PASSWORD")
-        if not password_matches(x_dev_password, passwords):
+        name = match_account(x_dev_password, accounts)
+        if name is None:
             await asyncio.sleep(1)  # 拖慢猜密碼的速度
             raise HTTPException(401, "密碼錯誤")
+        return name
 
     guarded = [Depends(require_password)]
 
@@ -98,6 +134,17 @@ def create_router(manager: RoomManager) -> APIRouter:
         if room is None:
             raise HTTPException(404, f"找不到房號 {code}")
         return room
+
+    # ---------- 登入者 ----------
+
+    @router.get("/me")
+    def me(name: str = Depends(require_password)):
+        profile = dev_profiles().get(name, {}) if name else {}
+        return {
+            "name": name,
+            "avatar": profile.get("avatar", ""),
+            "subtitle": profile.get("subtitle", ""),
+        }
 
     # ---------- 狀態 ----------
 
