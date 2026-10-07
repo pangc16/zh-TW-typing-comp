@@ -190,7 +190,9 @@ function buildRoomPanel(room, categoryNames) {
   info.textContent = `${STATE_LABELS[room.state] || room.state} · ${room.category}${round}`;
   const count = document.createElement("span");
   count.className = "hint-inline";
-  count.textContent = `${room.players.length} 人`;
+  count.textContent = room.spectators
+    ? `${room.players.length} 人 · ${room.spectators} 觀戰`
+    : `${room.players.length} 人`;
   summary.append(code, info, count);
   panel.append(summary);
 
@@ -276,6 +278,10 @@ function buildRoomPanel(room, categoryNames) {
   // 房間管理
   const manage = document.createElement("div");
   manage.className = "room-controls";
+  // 開新分頁觀戰：用 window.open 開的分頁會複製一份 sessionStorage，所以不用再登入
+  const watch = smallButton("觀戰", () => {
+    window.open(`/?spectate=${room.code}`, "_blank");
+  });
   const bots = smallButton("加機器人", () => {
     $("bot-room").value = room.code;
     $("bot-form").scrollIntoView({ behavior: "smooth", block: "center" });
@@ -296,7 +302,7 @@ function buildRoomPanel(room, categoryNames) {
     if (!confirm(`確定要關閉房間 ${room.code}？裡面的人會被踢回首頁。`)) return;
     roomAction(room, "close", undefined, `已關閉房間 ${room.code}`);
   }, "danger");
-  manage.append(bots, rename, close);
+  manage.append(watch, bots, rename, close);
 
   body.append(players, categoryField, controls, manage);
   panel.append(body);

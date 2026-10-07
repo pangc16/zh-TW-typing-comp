@@ -783,6 +783,59 @@ select option:disabled {
   body { padding-top: 66px; }
 }
 
+/* ---------- 觀戰模式 ---------- */
+
+.spectate-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  font-size: 0.88rem;
+}
+
+.spectate-dot {
+  width: 9px;
+  height: 9px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: spectate-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes spectate-pulse {
+  50% { opacity: 0.3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spectate-dot { animation: none; }
+}
+
+.spectate-note {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+/* 觀戰時把只有玩家／房主會用到的東西都藏起來 */
+body.spectating #copy-btn,
+body.spectating #category-field,
+body.spectating #custom-text-box,
+body.spectating #start-btn,
+body.spectating #reset-scores-btn,
+body.spectating #typing-input,
+body.spectating #typing-hint,
+body.spectating #stop-btn,
+body.spectating #my-round,
+body.spectating #again-btn,
+body.spectating #lobby-btn {
+  display: none !important;
+}
+
 /* ---------- 開發者專區 ---------- */
 
 .dev-link {

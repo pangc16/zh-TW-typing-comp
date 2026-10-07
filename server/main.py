@@ -5,6 +5,7 @@
 開發者專區的 API 在 dev.py。
 """
 
+import asyncio
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -52,6 +53,8 @@ async def websocket_endpoint(ws: WebSocket):
     try:
         # 第一個訊息必須是 join，之後才算正式進房
         first = await ws.receive_json()
+        if first.get("type") == "spectate":
+            return await spectate(ws, first)
         if first.get("type") != "join":
             return await _reject(ws, "連線協定錯誤")
 
@@ -83,6 +86,36 @@ async def websocket_endpoint(ws: WebSocket):
     finally:
         if room is not None and player is not None:
             await manager.disconnect(room, player)
+
+
+async def spectate(ws: WebSocket, first: dict) -> None:
+    """管理員觀戰：要帶開發者密碼。只能看，送什麼都不會影響比賽（ping 除外）。"""
+    accounts = dev.dev_accounts()
+    password = str(first.get("password") or "")
+    if not accounts or dev.match_account(password, accounts) is None:
+        await asyncio.sleep(1)  # 跟開發者 API 一樣拖慢猜密碼
+        return await _reject(ws, "開發者密碼錯誤，請重新登入開發者專區")
+
+    code = str(first.get("room") or "")
+    room = manager.find_room(code)
+    if room is None:
+        return await _reject(ws, f"找不到房號 {code.strip().upper()}")
+
+    room.spectators.add(ws)
+    try:
+        await ws.send_json({"type": "spectating", "code": room.code})
+        await ws.send_json(room.to_dict())
+        while True:
+            try:
+                message = await ws.receive_json()
+            except ValueError:
+                continue
+            if message.get("type") == "ping":
+                await ws.send_json({"type": "pong"})
+    except WebSocketDisconnect:
+        pass
+    finally:
+        room.spectators.discard(ws)
 
 
 async def handle_message(room, player, message: dict) -> None:

@@ -1,8 +1,9 @@
 """開發者專區的 API：伺服器狀態、測試機器人、即時調整設定。
 
 全部都要在 header 帶 X-Dev-Password，值要等於環境變數 DEV_PASSWORD 裡的其中一組。
-DEV_PASSWORD 可以用逗號分隔多組密碼，例如「aaa111,bbb222」，方便分給不同的人。
-每組前面可以加「名字:」，例如「小明:aaa111,小美:bbb222」，登入後專區會顯示「嗨，小明」。
+DEV_PASSWORD 可以用分號分隔多組密碼，例如「aaa111;bbb222」，方便分給不同的人
+（舊的逗號寫法「aaa111,bbb222」也還能用）。
+每組前面可以加「名字:」，例如「小明:aaa111;小美:bbb222」，登入後專區會顯示「嗨，小明」。
 
 每個人的副標與頭像放在環境變數 DEV_PROFILES（不寫在程式碼裡，GitHub 上就看不到），格式：
     名字|副標|頭像圖片網址;名字|副標|頭像圖片網址
@@ -15,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 import random
 import secrets
 import time
@@ -42,12 +44,12 @@ BOT_NAMES = ["打字機器人", "鍵盤俠", "注音達人", "倉頡小子", "�
 def dev_accounts() -> list[tuple[str, str]]:
     """把 DEV_PASSWORD 拆成 (名字, 密碼) 清單。
 
-    逗號分隔多組，前後空白不算，空的忽略。「名字:密碼」用第一個冒號切開；
+    分號（或舊的逗號）分隔多組，前後空白不算，空的忽略。「名字:密碼」用第一個冒號切開；
     名字裡不能有冒號，密碼可以；沒寫名字的那組名字是空字串。
     """
     raw = os.environ.get("DEV_PASSWORD", "")
     accounts = []
-    for item in raw.split(","):
+    for item in re.split(r"[;,]", raw):
         name, _, password = item.partition(":") if ":" in item else ("", "", item)
         name, password = name.strip(), password.strip()
         if password:
@@ -158,6 +160,7 @@ def create_router(manager: RoomManager) -> APIRouter:
                 "state": room.state,
                 "category": room.category,
                 "round": room.round,
+                "spectators": len(room.spectators),
                 "players": [
                     {"id": p.id, "nickname": p.nickname, "online": p.online, "bot": p.is_bot,
                      "host": p.id == room.host_id, "wins": p.wins,

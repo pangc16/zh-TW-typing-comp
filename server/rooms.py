@@ -79,6 +79,8 @@ class Room:
     host_id: str | None = None
     state: str = "lobby"
     players: dict[str, Player] = field(default_factory=dict)
+    # 觀戰中的管理員連線：收得到所有廣播，但不是玩家，不算人數、不會讓房間一直留著
+    spectators: set = field(default_factory=set)
     cleanup_task: asyncio.Task | None = None
     # 比賽資料
     category: str = ""                   # 房主選的文章分類
@@ -164,6 +166,11 @@ class RoomManager:
         for old, new in list(self.aliases.items()):
             if new == room.code:
                 del self.aliases[old]
+
+    def find_room(self, code: str) -> Room | None:
+        """用房號找房間，改過房號的舊房號也找得到。"""
+        code = code.strip().upper()
+        return self.rooms.get(code) or self.rooms.get(self.aliases.get(code, ""))
 
     def create_room(self) -> Room:
         room = Room(code=self._new_code(), category=texts.default_category())
@@ -256,6 +263,7 @@ class RoomManager:
             return
         if not room.players:
             self._forget_room(room)
+            await self._close_spectators(room, "房間已經沒有人，自動關閉了")
 
     def _maybe_transfer_host(self, room: Room) -> None:
         """房主離線或離開時，交棒給還在線上、最早加入的真人玩家（機器人不當房主）。"""
@@ -292,6 +300,13 @@ class RoomManager:
                 ws, player.ws = player.ws, None  # 先清掉，斷線處理才不會再排重連計時
                 await _safe_close(ws, message)
         room.players.clear()
+        await self._close_spectators(room, message)
+
+    async def _close_spectators(self, room: Room, message: str) -> None:
+        spectators = list(room.spectators)
+        room.spectators.clear()
+        for ws in spectators:
+            await _safe_close(ws, message)
 
     async def kick(self, room: Room, host: Player | None, target_id: str) -> None:
         """房主（或開發者）把某位玩家請出房間。對方可以再用連結回來，只是會變成新玩家。"""
@@ -492,5 +507,10 @@ class RoomManager:
                 await player.ws.send_json(message)
             except Exception:
                 broken.append(player)
+        for ws in list(room.spectators):
+            try:
+                await ws.send_json(message)
+            except Exception:
+                room.spectators.discard(ws)
         for player in broken:
             await self.disconnect(room, player)

@@ -484,6 +484,18 @@ button.secondary {
 
 .dev-card h2 { font-weight: 900; }
 
+/* 觀戰列做成轉播的「LIVE」字卡 */
+.spectate-bar {
+  border: none;
+  border-left: 6px solid var(--danger);
+  border-radius: 0;
+  font-family: var(--cond);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.spectate-dot { border-radius: 0; }
+
 /* 歡迎列做成轉播的選手字卡：方形號碼牌＋窄體粗字 */
 .dev-avatar {
   border-radius: 0;

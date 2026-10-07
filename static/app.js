@@ -9,6 +9,7 @@ const keyPlayer = (code) => `typing:player:${code}`;
 const keyDraft = (code) => `typing:draft:${code}`;
 const keyRound = (code) => `typing:round:${code}`;
 const KEY_STATS = "typing:stats";
+const KEY_DEV_PASSWORD = "typing:dev-password";  // 開發者專區登入時存的，觀戰要用
 
 function load(key) {
   try { return localStorage.getItem(key); } catch { return null; }
@@ -103,6 +104,11 @@ let article = "";         // 這一局的文章
 let raceStart = null;     // performance.now() 基準
 let tickTimer = null;
 
+// 觀戰模式：網址是 /?spectate=房號（從開發者專區的「觀戰」按鈕進來）。
+// 只看不打：看得到所有人的進度，但不是玩家，也不會寫進個人紀錄。
+const spectateCode = (new URLSearchParams(location.search).get("spectate") || "").trim().toUpperCase();
+const spectating = spectateCode !== "";
+
 // 這一局自己的打錯紀錄。存一份在 sessionStorage，重新整理也不會不見。
 // { raceId, errors, misses: {字: 次數}, wasError, summary }
 let roundLog = null;
@@ -165,6 +171,10 @@ function openSocket() {
   ws = new WebSocket(url);
 
   ws.onopen = () => {
+    if (spectating) {
+      send({ type: "spectate", room: code, password: loadSession(KEY_DEV_PASSWORD) || "" });
+      return;
+    }
     send({
       type: "join",
       room: code,
@@ -198,22 +208,23 @@ function handle(message) {
       roomCode = message.code;
       myId = message.playerId;
       saveSession(keyPlayer(roomCode), myId);
-      history.replaceState(null, "", `/?room=${roomCode}`);
-      retryDelay = 1000;
-      $("banner").classList.add("hidden");
-      clearError();
-      // 閒置太久中間的代理可能切斷連線，定時送 ping 保活
-      clearInterval(pingTimer);
-      pingTimer = setInterval(() => send({ type: "ping" }), 25000);
+      onConnected();
       break;
     }
+
+    case "spectating":
+      roomCode = message.code;
+      $("spectate-code").textContent = roomCode;
+      onConnected();
+      break;
 
     case "renamed":
       // 管理員在開發者專區幫房間換了房號
       if (roomCode) moveRoomCode(roomCode, message.code);
       roomCode = message.code;
       pendingCode = message.code;
-      history.replaceState(null, "", `/?room=${roomCode}`);
+      history.replaceState(null, "", roomUrl(roomCode));
+      if (spectating) $("spectate-code").textContent = roomCode;
       toast(`房號已改成 ${roomCode}`);
       break;
 
@@ -236,6 +247,11 @@ function handle(message) {
     case "error":
     case "kicked":
       leaving = true;
+      if (spectating) {
+        alert(message.message || "發生錯誤");
+        location.href = "/dev.html";
+        return;
+      }
       if (roomCode) {
         dropSession(keyPlayer(roomCode));
         dropSession(keyDraft(roomCode));
@@ -245,6 +261,21 @@ function handle(message) {
       showError(message.message || "發生錯誤");
       break;
   }
+}
+
+function roomUrl(code) {
+  return spectating ? `/?spectate=${code}` : `/?room=${code}`;
+}
+
+/** 連上房間之後（加入或觀戰）共用的收尾。 */
+function onConnected() {
+  history.replaceState(null, "", roomUrl(roomCode));
+  retryDelay = 1000;
+  $("banner").classList.add("hidden");
+  clearError();
+  // 閒置太久中間的代理可能切斷連線，定時送 ping 保活
+  clearInterval(pingTimer);
+  pingTimer = setInterval(() => send({ type: "ping" }), 25000);
 }
 
 /** 房號改了：把存在這個分頁的身分、草稿、本局紀錄搬到新房號底下。 */
@@ -368,16 +399,18 @@ function onRoom(snapshot) {
       article = snapshot.text;
       $("typing-input").value = "";
     }
-    beginRoundLog(snapshot.raceId);
+    if (!spectating) beginRoundLog(snapshot.raceId);
     showScreen("race");
 
     // 中途重連：用伺服器給的 elapsed 把計時器接回正確秒數
     if (snapshot.state === "racing" && raceStart === null && typeof snapshot.elapsed === "number") {
       raceStart = performance.now() - snapshot.elapsed * 1000;
-      const draft = loadSession(keyDraft(roomCode));
-      if (draft && !$("typing-input").value) $("typing-input").value = draft;
       startTimer();
-      enableInput();
+      if (!spectating) {
+        const draft = loadSession(keyDraft(roomCode));
+        if (draft && !$("typing-input").value) $("typing-input").value = draft;
+        enableInput();
+      }
     }
 
     renderProgress();
@@ -388,7 +421,7 @@ function onRoom(snapshot) {
   if (snapshot.state === "finished") {
     stopTimer();
     disableInput();
-    recordRound();
+    if (!spectating) recordRound();
     renderResult();
     showScreen("result");
   }
@@ -517,7 +550,7 @@ function runCountdown(seconds) {
 function onGo() {
   $("countdown").classList.add("hidden");
   raceStart = performance.now();
-  enableInput();
+  if (!spectating) enableInput();
   startTimer();
 }
 
@@ -559,17 +592,26 @@ function tick() {
   if (raceStart !== null) {
     const elapsed = (performance.now() - raceStart) / 1000;
     $("race-timer").textContent = elapsed.toFixed(1);
-    const typed = normalize($("typing-input").value);
-    $("race-cpm").textContent = String(cpmOf(commonPrefixLength(typed, article), elapsed));
+    // 觀戰時沒有自己的輸入，速度改顯示領先者的
+    const done = spectating
+      ? leaderProgress()
+      : commonPrefixLength(normalize($("typing-input").value), article);
+    $("race-cpm").textContent = String(cpmOf(done, elapsed));
   }
   if (room && room.state === "racing") renderTrack();
 }
 
 // ---------- 文章顯示 ----------
 
+/** 觀戰用：目前打最多字的人打到哪裡。 */
+function leaderProgress() {
+  return room ? Math.max(0, ...room.players.map((p) => p.progress)) : 0;
+}
+
 function refreshArticle() {
-  const typed = normalize($("typing-input").value);
-  const prefix = commonPrefixLength(typed, article);
+  const typed = spectating ? "" : normalize($("typing-input").value);
+  // 觀戰時游標跟著領先者走
+  const prefix = spectating ? leaderProgress() : commonPrefixLength(typed, article);
   const hasError = typed.length > prefix;
 
   $("art-done").textContent = article.slice(0, prefix);
@@ -579,6 +621,7 @@ function refreshArticle() {
   $("art-rest").textContent = article.slice(prefix + 1);
 
   $("race-progress").textContent = `${prefix} / ${article.length}`;
+  if (spectating) return;
   const self = me();
   if (self && self.seconds !== null) return;
   $("typing-hint").textContent = hasError
@@ -791,7 +834,7 @@ function renderResult() {
 
 function renderMyRound() {
   const box = $("my-round");
-  const log = room.raceId ? restoreRoundLog(room.raceId) : null;
+  const log = room.raceId && !spectating ? restoreRoundLog(room.raceId) : null;
   const summary = log && log.summary;
   box.classList.toggle("hidden", !summary);
   if (!summary) return;
@@ -1039,6 +1082,11 @@ $("clear-stats-btn").addEventListener("click", () => {
 
 function leave() {
   leaving = true;
+  if (spectating) {
+    if (ws) ws.close();
+    location.href = "/dev.html";
+    return;
+  }
   if (roomCode) {
     dropSession(keyPlayer(roomCode));
     dropSession(keyDraft(roomCode));
@@ -1124,19 +1172,38 @@ fetch("/health")
   })
   .catch(() => { /* 拿不到版本號就不顯示標籤 */ });
 
-// 先看這個分頁自己的暱稱：同一台電腦開好幾個分頁時，
-// 共用的 localStorage 會被最後一個分頁蓋掉，重新整理就會變成別人的名字
-const savedNickname = loadSession(KEY_NICKNAME) || load(KEY_NICKNAME);
-if (savedNickname) $("nickname-input").value = savedNickname;
+function startSpectating() {
+  if (!loadSession(KEY_DEV_PASSWORD)) {
+    alert("觀戰要先登入開發者專區");
+    location.href = "/dev.html";
+    return;
+  }
+  document.body.classList.add("spectating");
+  $("spectate-bar").classList.remove("hidden");
+  $("spectate-code").textContent = spectateCode;
+  for (const id of ["leave-btn", "leave-btn-2"]) $(id).textContent = "結束觀戰，回開發者專區";
+  showScreen("lobby");
+  pendingCode = spectateCode;
+  openSocket();
+}
 
-const urlRoom = (new URLSearchParams(location.search).get("room") || "").trim().toUpperCase();
-if (urlRoom) $("room-code-input").value = urlRoom;
+if (spectating) {
+  startSpectating();
+} else {
+  // 先看這個分頁自己的暱稱：同一台電腦開好幾個分頁時，
+  // 共用的 localStorage 會被最後一個分頁蓋掉，重新整理就會變成別人的名字
+  const savedNickname = loadSession(KEY_NICKNAME) || load(KEY_NICKNAME);
+  if (savedNickname) $("nickname-input").value = savedNickname;
 
-// 記得暱稱的話就跳過第一步；從邀請連結進來則直接到輸入房號
-if (savedNickname) showStep(urlRoom ? "join" : "choose");
-else showStep("name");
+  const urlRoom = (new URLSearchParams(location.search).get("room") || "").trim().toUpperCase();
+  if (urlRoom) $("room-code-input").value = urlRoom;
 
-// 重新整理網頁時，如果這間房間的身分還在，就自動接回去
-if (urlRoom && savedNickname && loadSession(keyPlayer(urlRoom))) {
-  enter(urlRoom);
+  // 記得暱稱的話就跳過第一步；從邀請連結進來則直接到輸入房號
+  if (savedNickname) showStep(urlRoom ? "join" : "choose");
+  else showStep("name");
+
+  // 重新整理網頁時，如果這間房間的身分還在，就自動接回去
+  if (urlRoom && savedNickname && loadSession(keyPlayer(urlRoom))) {
+    enter(urlRoom);
+  }
 }

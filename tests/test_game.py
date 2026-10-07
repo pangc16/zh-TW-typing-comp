@@ -1,6 +1,10 @@
-"""遊戲流程的整合測試：多局勝場、結束比賽、踢人、重連、換房號。"""
+"""遊戲流程的整合測試：多局勝場、結束比賽、踢人、重連、換房號、觀戰。"""
 
 import asyncio
+
+import websockets
+
+from tests.conftest import DEV_PASSWORD, Player
 
 
 def run(coroutine):
@@ -158,5 +162,61 @@ def test_rename_room(server):
         # 舊房號不能給別間房間用
         status, _ = server.api("POST", f"/rooms/{other.code}/rename", {"code": old})
         assert status == 400
+
+    run(scenario())
+
+
+async def spectate(server, room: str, password: str):
+    """管理員觀戰：用開發者密碼連進房間。"""
+    watcher = Player(await websockets.connect(server.ws_url))
+    await watcher.send(type="spectate", room=room, password=password)
+    watcher.joined = await watcher.until(lambda m: m["type"] in ("spectating", "error"))
+    return watcher
+
+
+def test_spectate_needs_dev_password(server):
+    async def scenario():
+        a = await server.join("甲")
+        watcher = await spectate(server, a.code, "wrong")
+        assert watcher.joined["type"] == "error"
+
+    run(scenario())
+
+
+def test_spectator_watches_without_playing(server):
+    async def scenario():
+        a = await server.join("甲")
+        b = await server.join("乙", room=a.code)
+        watcher = await spectate(server, a.code, DEV_PASSWORD)
+        assert watcher.joined == {"type": "spectating", "code": a.code}
+        lobby = await watcher.room("lobby")
+        assert [p["nickname"] for p in lobby["players"]] == ["甲", "乙"]
+
+        # 開發者專區看得到有人在觀戰
+        _, status = server.api("GET", "/status")
+        row = next(r for r in status["rooms"] if r["code"] == a.code)
+        assert row["spectators"] == 1
+
+        # 觀戰者收得到比賽進度，但送什麼都不算數
+        race = await start_race(a)
+        await watcher.room("racing")
+        await watcher.send(type="input", text=race["text"])
+        await watcher.send(type="stop")
+        await a.send(type="input", text=race["text"][:5])
+        progress = await watcher.until(
+            lambda m: m["type"] == "room" and any(p["progress"] == 5 for p in m["players"])
+        )
+        assert progress["state"] == "racing"
+        assert len(progress["players"]) == 2
+
+        await a.send(type="input", text=race["text"])
+        await b.send(type="input", text=race["text"])
+        result = await watcher.room("finished")
+        assert result["ranking"][0] == a.id
+
+        # 關閉房間時觀戰者也會收到通知
+        server.api("POST", f"/rooms/{a.code}/close")
+        kicked = await watcher.until(lambda m: m["type"] == "kicked")
+        assert "關閉" in kicked["message"]
 
     run(scenario())

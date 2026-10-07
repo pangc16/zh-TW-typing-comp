@@ -23,6 +23,11 @@ def test_multiple_passwords(monkeypatch):
     assert dev.match_account("", accounts) is None
 
 
+def test_semicolon_and_comma_both_work(monkeypatch):
+    monkeypatch.setenv("DEV_PASSWORD", "小明:aaa111; 小美:bbb222,ccc333")
+    assert dev.dev_accounts() == [("小明", "aaa111"), ("小美", "bbb222"), ("", "ccc333")]
+
+
 def test_named_passwords(monkeypatch):
     monkeypatch.setenv("DEV_PASSWORD", "小明:aaa111, 小美 : bbb:222 ,ccc333")
     accounts = dev.dev_accounts()
