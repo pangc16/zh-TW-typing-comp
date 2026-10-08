@@ -1177,65 +1177,8 @@ function leave() {
 $("leave-btn").addEventListener("click", leave);
 $("leave-btn-2").addEventListener("click", leave);
 
-// ---------- 彩蛋：只有打開 F12 開發者工具的人看得到 ----------
-// 想改文字就改這裡；%c 是下一段文字要套用的樣式。
-// 圖片放在 static/ 資料夾，檔名寫在 EGG_IMAGE；找不到圖片就只印文字。
-
-const EGG_IMAGE = "/easter-egg.jpg";
-const EGG_IMAGE_WIDTH = 240;  // Console 裡顯示的寬度（px），高度照比例
-
-/** 把圖片讀成 data: 網址並量好尺寸；讀不到回傳 null。
- *  Chrome／Edge 的 Console 為了隱私，樣式裡只接受 data: 網址的圖片，一般網址會被擋掉。 */
-async function loadImage(url) {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return null;
-    const blob = await response.blob();
-    const dataUrl = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-    const img = new Image();
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-      img.src = dataUrl;
-    });
-    return { dataUrl, width: img.naturalWidth, height: img.naturalHeight };
-  } catch {
-    return null;
-  }
-}
-
-async function consoleWelcome() {
-  const title = "font: 900 22px sans-serif; padding: 6px 12px; background: #ffd400; color: #111;";
-  const body = "font: 14px/1.7 sans-serif;";
-  const link = "font: 700 14px sans-serif; color: #2563eb;";
-
-  // 先等圖片載入完再一起印，順序才不會亂
-  const img = await loadImage(EGG_IMAGE);
-
-  console.log("%c⌨ 中文打字競速", title);
-  console.log("%c我不像老師有藏密碼==", body);
-  if (img) {
-    // Console 不能直接放圖，只能用一段空白文字把圖片當背景撐出來
-    const height = Math.round(EGG_IMAGE_WIDTH * img.height / img.width);
-    console.log(
-      "%c ",
-      `font-size: 1px; line-height: ${height}px; padding: ${height / 2}px ${EGG_IMAGE_WIDTH / 2}px;` +
-      `background-image: url("${img.dataUrl}"); background-size: contain;` +
-      "background-repeat: no-repeat; background-position: center;",
-    );
-  }
-  console.log("%c但如果你想新增文章，你可以聯絡我或在 GitHub 開 issue：", body);
-  console.log("%chttps://github.com/pangc16/zh-TW-typing-comp/issues", link);
-}
-
 // ---------- 啟動 ----------
 
-consoleWelcome();
 renderStats();
 
 // 版本號只寫在 server/config.py，這裡向伺服器要，兩邊才不會不一致
